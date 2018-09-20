@@ -1,22 +1,14 @@
+import pandas as pd
 from argparse import ArgumentParser
 from pymongo import MongoClient
-from bson import json_util
-
-
-class QueryException(Exception):
-    pass
 
 
 def parse_args():
     parser = ArgumentParser()
-    parser.add_argument('--product_name')
-    parser.add_argument('--vendor_name')
-    parser.add_argument('--version_value')
+    parser.add_argument('assets_table_path')
+    parser.add_argument('--target_path', default='/tmp/results.csv')
     args = parser.parse_args()
-    return dict(
-        product_name=args.product_name,
-        vendor_name=args.vendor_name,
-        version_value=args.version_value)
+    return args.assets_table_path, args.target_path
 
 
 def connect_database(url, mongo_dict):
@@ -26,7 +18,7 @@ def connect_database(url, mongo_dict):
     return collection[mongo_dict['document']]
 
 
-def query_nvd(cursor, product_name=None, vendor_name=None, version_value=None):
+def query_nvd(cursor, vendor_name=None, product_name=None, version_value=None):
     product_query, vendor_query, version_query = {}, {}, {}
     if not (product_name or vendor_name or version_value):
         return None
@@ -47,22 +39,27 @@ def query_nvd(cursor, product_name=None, vendor_name=None, version_value=None):
         version_query = {
             version_query_string: version_value}
 
-    return cursor.find(
-        {'$and': [product_query, version_query, vendor_query]})
+    return list(cursor.find(
+        {'$and': [product_query, version_query, vendor_query]}))
 
 
 if __name__ == '__main__':
-    ARGS = parse_args()
+    ASSETS_TABLE_PATH, TARGET_PATH = parse_args()
+    T = pd.read_csv(ASSETS_TABLE_PATH)
+    TABLE = T.where(pd.notnull(T), None)
     URL = 'mongodb://CrossCompute:abc123@162.216.19.185:27017/Vulnerabilities'
     MONGO_DICT = dict(
         database='Vulnerabilities',
         collection='NVD',
         document='CVE_Items')
     CURSOR = connect_database(URL, MONGO_DICT)
-    RESULTS = query_nvd(CURSOR, **ARGS)
-    if RESULTS is None:
-        raise QueryException('''
-          No filter selected, add --product_name or
-          --vendor_name or --version_value''')
-    with open('vulnerabilities.json', 'w') as f:
-        f.write(json_util.dumps(RESULTS))
+
+    def f(row):
+        return {
+            'vulnerabilities': query_nvd(CURSOR, *row.values),
+            'query': 'vendor: %s, product: %s, version: %s' % tuple(
+                row.values)}
+
+    RESULTS = TABLE.apply(f, axis=1, result_type='expand')
+    RESULTS.to_csv(TARGET_PATH, index=False)
+    print('results_table_path = %s' % TARGET_PATH)
