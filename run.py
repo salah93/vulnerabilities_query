@@ -3,18 +3,20 @@ from pymongo import MongoClient
 from bson import json_util
 
 
+class QueryException(Exception):
+    pass
+
+
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--product_name')
     parser.add_argument('--vendor_name')
     parser.add_argument('--version_value')
     args = parser.parse_args()
-    if not (args.product_name or args.vendor_name or args.version_value):
-        parser.error('''
-          No filter selected, add --product_name or
-          --vendor_name or --version_value''')
-    else:
-        return args
+    return dict(
+        product_name=args.product_name,
+        vendor_name=args.vendor_name,
+        version_value=args.version_value)
 
 
 def connect_database(url, mongo_dict):
@@ -24,29 +26,29 @@ def connect_database(url, mongo_dict):
     return collection[mongo_dict['document']]
 
 
-def main(cursor, args):
+def query_nvd(cursor, product_name=None, vendor_name=None, version_value=None):
     product_query, vendor_query, version_query = {}, {}, {}
-    if args.product_name:
+    if not (product_name or vendor_name or version_value):
+        return None
+    if product_name:
         product_query_string = \
             'cve.affects.vendor.vendor_data.product.product_data.product_name'
         product_query = {
-            product_query_string: args.product_name}
-    if args.vendor_name:
+            product_query_string: product_name}
+    if vendor_name:
         vendor_query_string = \
             'cve.affects.vendor.vendor_data.vendor_name'
         vendor_query = {
-            vendor_query_string: args.vendor_name}
-    if args.version_value:
+            vendor_query_string: vendor_name}
+    if version_value:
         version_query_string = \
             'cve.affects.vendor.vendor_data.product.product_data.version.' + \
             'version_data.version_value'
         version_query = {
-            version_query_string: args.version_value}
+            version_query_string: version_value}
 
-    results = cursor.find(
+    return cursor.find(
         {'$and': [product_query, version_query, vendor_query]})
-    with open('vulnerabilities.json', 'w') as f:
-        f.write(json_util.dumps(results))
 
 
 if __name__ == '__main__':
@@ -57,4 +59,10 @@ if __name__ == '__main__':
         collection='NVD',
         document='CVE_Items')
     CURSOR = connect_database(URL, MONGO_DICT)
-    main(CURSOR, ARGS)
+    RESULTS = query_nvd(CURSOR, **ARGS)
+    if RESULTS is None:
+        raise QueryException('''
+          No filter selected, add --product_name or
+          --vendor_name or --version_value''')
+    with open('vulnerabilities.json', 'w') as f:
+        f.write(json_util.dumps(RESULTS))
