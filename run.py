@@ -1,14 +1,15 @@
 import pandas as pd
 from argparse import ArgumentParser
+from os.path import join
 from pymongo import MongoClient
 
 
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('assets_table_path')
-    parser.add_argument('--target_path', default='/tmp/results.csv')
+    parser.add_argument('--target_folder', default='/tmp')
     args = parser.parse_args()
-    return args.assets_table_path, args.target_path
+    return args.assets_table_path, args.target_folder
 
 
 def connect_database(url, mongo_dict):
@@ -44,7 +45,8 @@ def query_nvd(cursor, vendor_name=None, product_name=None, version_value=None):
 
 
 if __name__ == '__main__':
-    ASSETS_TABLE_PATH, TARGET_PATH = parse_args()
+    ASSETS_TABLE_PATH, TARGET_FOLDER = parse_args()
+    TARGET_PATH = join(TARGET_FOLDER, 'results.csv')
     T = pd.read_csv(ASSETS_TABLE_PATH)
     TABLE = T.where(pd.notnull(T), None)
     URL = 'mongodb://CrossCompute:abc123@162.216.19.185:27017/Vulnerabilities'
