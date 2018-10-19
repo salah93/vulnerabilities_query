@@ -18,8 +18,8 @@ if __name__ == '__main__':
             for product in vendor['product']['product_data']:
                 product_names.add(product['product_name'])
     with open('product_names.txt', 'w') as f:
-        for product in product_names:
+        for product in sorted(list(product_names)):
             f.write(product + '\n')
     with open('vendor_names.txt', 'w') as f:
-        for vendor in vendor_names:
+        for vendor in sorted(list(vendor_names)):
             f.write(vendor + '\n')

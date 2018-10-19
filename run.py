@@ -40,8 +40,10 @@ def query_nvd(cursor, vendor_name=None, product_name=None, version_value=None):
         version_query = {
             version_query_string: version_value}
 
-    return list(cursor.find(
-        {'$and': [product_query, version_query, vendor_query]}))
+    return list(
+        map(lambda x: x['cve']['description']['description_data'][0]['value'],
+            cursor.find(
+                {'$and': [product_query, version_query, vendor_query]})))
 
 
 if __name__ == '__main__':
@@ -57,10 +59,12 @@ if __name__ == '__main__':
     CURSOR = connect_database(URL, MONGO_DICT)
 
     def f(row):
+        vendor, product, version = tuple(row.values)
         return {
-            'vulnerabilities': query_nvd(CURSOR, *row.values),
-            'query': 'vendor: %s, product: %s, version: %s' % tuple(
-                row.values)}
+            'vulnerabilities': query_nvd(CURSOR, vendor, product, version),
+            'vendor': vendor,
+            'product': product,
+            'version': version}
 
     RESULTS = TABLE.apply(f, axis=1, result_type='expand')
     RESULTS.to_csv(TARGET_PATH, index=False)
