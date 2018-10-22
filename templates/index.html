@@ -16,7 +16,7 @@
 	<body>
 		<div class="container-fluid">
       <h1>Vulnerabilities</h1>
-      <form>
+        <form>
         <label for='vendor'>Vendor
           <input name='vendor'>
         </label>
@@ -27,8 +27,9 @@
           <input name='version'>
         </label>
         <input id='submit' type='submit' class='btn'>
-      </form>
+        </form>
       <div id='result-table'></div>
+          <input type='submit' value='download' id='download' name='download'>
 		</div>
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
@@ -44,7 +45,10 @@
       $(document).ready(() => {
         $("#result-table").tabulator({
           columns:[
-            {title:"Vulnerability", field:"vulnerability", sorter:"string", align:"left"}],
+            {title:"Vendor", field:"vendor", sorter:"string", align:"left"},
+            {title:"Product", field:"product", sorter:"string", align:"left"},
+            {title:"Vulnerability", field:"vulnerability", sorter:"string", align:"left"},
+          ],
         });
       });
       document.getElementById('submit').addEventListener('click', (e) => {
@@ -57,34 +61,19 @@
         $("#result-table").tabulator('destroy');
         $("#result-table").tabulator({
           columns:[
-            {title:"Vulnerability", field:"vulnerability", sorter:"string", align:"left"}],
+            {title:"Vendor", field:"vendor", sorter:"string", align:"left", headerFilter:"input"},
+            {title:"Product", field:"product", sorter:"string", align:"left", headerFilter:"input"},
+            {title:"Vulnerability", field:"vulnerability", sorter:"string", align:"left", headerFilter:"input"},
+          ],
           ajaxURL: `/query?${form}`,
-          //ajaxProgressiveLoad:"scroll", // enable progressive loading
           pagination:"remote", //enable remote pagination
           paginationSize:20,
         });
-        /*
-        fetch('/query', {
-          method: "POST",
-          body: JSON.stringify(data),
-        }).then((result) => {
-          return result.json()
-        }).then((response) => {
-          $("#result-table").tabulator({
-            columns:[
-              {title:"Vulnerability", field:"vulnerability", sorter:"string", align:"center"}],
-          });
-          const tableData = response.result.map((r, i) => {
-            return {
-              id: i,
-              vulnerability: r
-            }
-          });
-          $("#result-table").tabulator("setData", tableData);
-          //document.getElementById('result').textContent = response.result
-        });
-        */
       })
+
+      document.getElementById('download').addEventListener('click', (e) => {
+        $("#result-table").tabulator('download', 'csv', 'data.csv');
+      });
     </script>
 	</body>
 </html>

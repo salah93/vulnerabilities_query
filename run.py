@@ -1,6 +1,5 @@
 import pandas as pd
 from argparse import ArgumentParser
-from functools import lru_cache
 from os.path import join
 from pymongo import MongoClient
 
@@ -20,7 +19,6 @@ def connect_database(url, mongo_dict):
     return collection[mongo_dict['document']]
 
 
-#@lru_cache()
 def query_nvd(cursor, vendor_name=None, product_name=None, version_value=None):
     product_query, vendor_query, version_query = {}, {}, {}
     if not (product_name or vendor_name or version_value):
@@ -43,7 +41,14 @@ def query_nvd(cursor, vendor_name=None, product_name=None, version_value=None):
             version_query_string: version_value}
 
     return list(
-        map(lambda x: x['cve']['description']['description_data'][0]['value'],
+        map(lambda x: dict(
+                vulnerability=x[
+    'cve']['description']['description_data'][0]['value'],
+                vendor=x[
+    'cve']['affects']['vendor']['vendor_data'][0]['vendor_name'],
+                product=x[
+    'cve']['affects']['vendor']['vendor_data'][0][
+        'product']['product_data'][0]['product_name']),
             cursor.find(
                 {'$and': [product_query, version_query, vendor_query]})))
 

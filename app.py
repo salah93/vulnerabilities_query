@@ -13,7 +13,6 @@ def main():
 
 @lru_cache(maxsize=32)
 def query(vendor, product, version):
-    print('here - ' + 'x' * 100)
     return query_nvd(
             app.config['cursor'],
             vendor,
@@ -30,9 +29,7 @@ def get_query():
     page = int(form.get('page', 1))
     size = int(form.get('size', 20))
 
-    vulnerabilities = list(map(
-        lambda d: dict(vulnerability=d),
-        query(vendor, product, version)))
+    vulnerabilities = query(vendor, product, version)
     last_page = len(vulnerabilities) / size
     data = vulnerabilities[(page - 1) * size: page * size]
     return jsonify(dict(last_page=last_page, data=data))
